@@ -1,1 +1,2 @@
-db.name=PostgreSQL
+db:
+ name: PostgreSQL
