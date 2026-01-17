@@ -6,3 +6,6 @@ spring:
           uri: lb://IDENTITY-SERVICE
           predicates:
             - Path=/auth/** 
+
+jwt:
+  secret: "NqpdMZZKFUiKF2Dk5grvTQZZFqRvCZPUoZejzYlo9kY="
