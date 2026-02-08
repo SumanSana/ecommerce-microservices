@@ -1,2 +1,52 @@
-db:
- name: PostgreSQL
+spring:
+  # PostgreSQL 18
+  datasource:
+    url: jdbc:postgresql://localhost:5432/product_db
+    username: product_user
+    password: product_pass
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # MongoDB 8
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/product_read_db
+      auto-index-creation: true
+
+  # Kafka 4 
+  kafka:
+    bootstrap-servers: localhost:9092
+    
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        acks: all
+        # Forces the producer to STOP sending class/package info headers
+        spring.json.add.type.headers: false 
+
+    consumer:
+      group-id: product-group # NEW Group to reset the offset
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # We use the ErrorHandlingDeserializer to ensure we see the error if it fails
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        # These three lines fix the mismatch once and for all:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: "java.util.HashMap"
+        spring.json.trusted.packages: "*"
+
+# Add this to enable the Outbox Scheduler
+logging:
+  level:
+    com.ecommerce.productservice: DEBUG # Useful to see the sync logs
+    
+server:
+  port: 9010

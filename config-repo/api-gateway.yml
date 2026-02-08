@@ -6,3 +6,7 @@ spring:
           uri: lb://IDENTITY-SERVICE
           predicates:
             - Path=/auth/** 
+
+   
+server:
+  port: 8080

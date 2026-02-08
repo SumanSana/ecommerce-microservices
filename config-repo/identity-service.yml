@@ -4,3 +4,6 @@ spring:
     username: identity_user
     password: identity_pass
     driver-class-name: org.postgresql.Driver
+
+server:
+  port: 8090
