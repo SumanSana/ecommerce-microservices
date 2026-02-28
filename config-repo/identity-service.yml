@@ -1,9 +1,9 @@
+server:
+  port: 8090
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/identity_db
     username: identity_user
     password: identity_pass
     driver-class-name: org.postgresql.Driver
-
-server:
-  port: 8090

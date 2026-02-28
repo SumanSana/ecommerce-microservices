@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public record TokenRequestDTO(
 
         @NotBlank
-        String mobileNumber,
+        String email,
 
         @NotBlank
         String password

@@ -1,5 +1,6 @@
 package com.ecommerce.productservice.processor;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.kafka.core.KafkaTemplate;
@@ -21,13 +22,11 @@ public class OutboxProcessor {
 	private final OutboxRepository outboxRepository;
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 
-	// Runs every 5 seconds
 	@Scheduled(fixedDelay = 5000)
 	@Transactional
 	public void relayEvents() {
 
-		// Fetch unprocessed events
-		List<OutboxEvent> events = outboxRepository.findByProcessedFalseOrderByCreatedAtAsc();
+		List<OutboxEvent> events = outboxRepository.findTop20ByProcessedAtIsNullOrderByCreatedAtAsc();
 
 		for (OutboxEvent event : events) {
 			try {
@@ -35,9 +34,11 @@ public class OutboxProcessor {
 				log.info("DEBUG: Sending Payload -> {}", event.getPayload());
 				// Publish to Kafka, We use the aggregateId as the Kafka Key to ensure ordering
 				kafkaTemplate.send("product-sync-topic", event.getAggregateId(), event.getPayload());
+				if (event.getType().equals("PRODUCT_CREATED"))
+					kafkaTemplate.send("inventory-init-topic", event.getAggregateId(), event.getPayload());
 
 				// Mark as processed
-				event.setProcessed(true);
+				event.setProcessedAt(Instant.now());
 				outboxRepository.save(event);
 
 				log.info("Relayed event {} to Kafka topic", event.getId());

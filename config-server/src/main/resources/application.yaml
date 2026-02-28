@@ -1,15 +1,14 @@
 spring:
- application:
+  application:
     name: config-server
- cloud:
-  config:
-   server:
-    git:
-     uri: https://github.com/SumanSana/ecommerce-microservices
-     username: ${GIT_USERNAME}
-     password: ${GIT_PASSWORD}
-     default-label: development
-     search-paths: config-repo
-     
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          # Note the 'native' keyword here instead of 'git'
+          search-locations: ${file_location}
+
 server:
- port: 8888
+  port: 8888

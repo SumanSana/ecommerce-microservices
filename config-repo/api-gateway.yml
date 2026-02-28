@@ -1,3 +1,6 @@
+server:
+  port: 8080
+  
 spring:
   cloud:
     gateway:
@@ -5,8 +8,20 @@ spring:
         - id: identity-service 
           uri: lb://IDENTITY-SERVICE
           predicates:
-            - Path=/auth/** 
-
-   
-server:
-  port: 8080
+            - Path=/ekart/v1/auth/** 
+        - id: product-service
+          uri: lb://PRODUCT-SERVICE
+          predicates:
+            - Path=/ekart/v1/products/**
+        - id: inventory-service
+          uri: lb://INVENTORY-SERVICE
+          predicates: 
+            - Path=/ekart/v1/inventory/**
+        - id: order-service
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/ekart/v1/orders/**
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/ekart/v1/payments/**

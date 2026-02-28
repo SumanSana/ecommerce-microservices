@@ -10,5 +10,6 @@ import com.ecommerce.productservice.entity.OutboxEvent;
 
 @Repository
 public interface OutboxRepository extends JpaRepository<OutboxEvent, UUID> {
-    List<OutboxEvent> findByProcessedFalseOrderByCreatedAtAsc();
+
+	List<OutboxEvent> findTop20ByProcessedAtIsNullOrderByCreatedAtAsc();
 }

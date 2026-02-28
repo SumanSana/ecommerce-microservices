@@ -28,13 +28,12 @@ public class JwtServiceImpl implements JwtService {
 	}
 
 	@Override
-	public String generateToken(String userId, String mobileNumber, Set<Role> roles) {
+	public String generateToken(String userId, String email, Set<Role> roles) {
 
 		Instant now = Instant.now();
 
-		return Jwts.builder().subject(userId).claim("mobile", mobileNumber).claim("roles", roles)
-				.issuedAt(Date.from(now)).expiration(Date.from(now.plusMillis(Constants.EXPIRATION_MS)))
-				.signWith(key, Jwts.SIG.HS256).compact();
+		return Jwts.builder().subject(userId).claim("email", email).claim("roles", roles).issuedAt(Date.from(now))
+				.expiration(Date.from(now.plusMillis(Constants.EXPIRATION_MS))).signWith(key, Jwts.SIG.HS256).compact();
 	}
 
 	@Override

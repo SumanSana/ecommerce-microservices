@@ -40,13 +40,10 @@ public class OutboxEvent {
     @Column(columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> payload;
 
-    private Boolean processed = false;
-
     @CreatedDate
 	@Column(updatable = false, nullable = false)
 	private Instant createdAt;
+	
+	private Instant processedAt; 
 
-	@LastModifiedDate
-	@Column(nullable = false)
-	private Instant updatedAt;
 }

@@ -16,7 +16,7 @@ import com.ecommerce.identityservice.service.AuthService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/ekart/v1/auth")
 public class AuthController {
 
 	@Autowired

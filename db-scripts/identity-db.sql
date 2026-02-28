@@ -1,10 +1,3 @@
-create database identity_db;
-
-CREATE USER identity_user WITH PASSWORD 'identity_pass';
-
-ALTER DATABASE identity_db OWNER TO identity_user;
-
-GRANT ALL PRIVILEGES ON DATABASE identity_db TO identity_user;
 
 CREATE TYPE user_status AS ENUM ('ACTIVE', 'BLOCKED', 'DELETED');
 
@@ -20,6 +13,8 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_mobile ON users(mobile_number);
+CREATE INDEX idx_users_email ON users(email);
+
 
 CREATE TABLE roles (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
@@ -39,7 +34,6 @@ CREATE TABLE user_roles (
     user_id UUID NOT NULL,
     role_id UUID NOT NULL,
     assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     PRIMARY KEY (user_id, role_id),
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES roles(id)

@@ -46,6 +46,7 @@ public class Product {
 	@JoinColumn(name = "category_id")
 	private Category category;
 
+	@Column(name="status")
 	private String status = "A";
 
 	@OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
@@ -56,6 +57,5 @@ public class Product {
 	private Instant createdAt;
 
 	@LastModifiedDate
-	@Column(nullable = false)
 	private Instant updatedAt;
 }

@@ -2,10 +2,5 @@ spring:
   application:
     name: product-service
   config:
-    enabled: false
     import: "optional:configserver:http://localhost:8888"
     
-eureka:
-  client:
-    service:
-      url: http://localhost:8761/eureka

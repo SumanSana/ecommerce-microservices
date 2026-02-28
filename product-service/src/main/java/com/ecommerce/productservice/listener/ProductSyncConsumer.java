@@ -1,16 +1,12 @@
 package com.ecommerce.productservice.listener;
 
-import java.math.BigDecimal;
-import java.util.Map;
+import java.time.Instant;
 
-import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.annotation.RetryableTopic;
-import org.springframework.kafka.retrytopic.DltStrategy;
-import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
-import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
 
+import com.ecommerce.productservice.dto.InventoryUpdateEvent;
+import com.ecommerce.productservice.dto.ProductSyncEvent;
 import com.ecommerce.productservice.entity.ProductView;
 import com.ecommerce.productservice.repository.ProductViewRepository;
 
@@ -24,30 +20,50 @@ public class ProductSyncConsumer {
 
 	private final ProductViewRepository productViewRepository;
 
-	@RetryableTopic(attempts = "3", backoff = @Backoff(delay = 2000, multiplier = 2.0), topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE, dltStrategy = DltStrategy.FAIL_ON_ERROR)
-	@KafkaListener(topics = "product-sync-topic", groupId = "product-group")
-	public void consumeProductEvent(Map<String, Object> payload) {
-		log.info("Received sync event: {}", payload);
+	@KafkaListener(topics = "product-sync-topic", containerFactory = "productSync")
+	public void consumeProductEvent(ProductSyncEvent product) {
+		log.info("Received sync event: {}", product);
 
 		try {
 
-			String id = payload.get("id").toString();
-
-			ProductView view = ProductView.builder().id(id).skuId(payload.get("skuId").toString())
-					.name(payload.get("name").toString()).brandName(payload.get("brandName").toString())
-					.price(new BigDecimal(payload.get("price").toString()))
-					.attributes((Map<String, Object>) payload.get("attributes")).build();
+			ProductView view = ProductView.builder().skuId(product.skuId()).status(product.status())
+					.productId(product.productId()).brandName(product.brandName()).categoryName(product.categoryName())
+					.name(product.name()).description(product.description()).price(product.price())
+					.attributes(product.attributes()).build();
 
 			productViewRepository.save(view);
 
 		} catch (Exception e) {
-			log.error("Retrying: Sync failed for ID {}", payload.get("id"));
+			log.error("Retrying: Sync failed for ID {}", product.productId());
 			throw e;
 		}
 	}
 
-	@DltHandler
-	public void handleDlt(Map<String, Object> payload) {
-		log.error("CRITICAL: Message moved to DLT after multiple retries: {}", payload);
+	@KafkaListener(topics = "inventory-update-topic", containerFactory = "inventoryUpdate")
+	public void handleInventoryUpdate(InventoryUpdateEvent event) {
+
+		log.info("Received sync event from Inventory : {}", event);
+		try {
+			productViewRepository.findBySkuId(event.skuId()).ifPresent(view -> {
+
+				view.setAvailableQuantity(event.availableQuantity());
+				view.setInStock(event.availableQuantity() > 0);
+
+				if (event.availableQuantity() == 0) {
+					view.setStockLabel("Out of Stock");
+				} else if (event.availableQuantity() > 0 && event.availableQuantity() < 10) {
+					view.setStockLabel("Only " + event.availableQuantity() + " left!");
+				} else {
+					view.setStockLabel("In Stock");
+				}
+				productViewRepository.save(view);
+			});
+
+		} catch (Exception e) {
+			log.error("Retrying: Sync failed for skuId : {}", event.skuId());
+			throw e;
+		}
+
 	}
+
 }

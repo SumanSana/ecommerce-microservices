@@ -23,13 +23,13 @@ public class AuthServiceImpl implements AuthService {
 
 	@Autowired
 	private UserRepository userRepository;
-	
+
 	@Autowired
 	private RoleRepository roleRepository;
-	
+
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-	
+
 	@Autowired
 	private JwtService jwtService;
 
@@ -43,14 +43,11 @@ public class AuthServiceImpl implements AuthService {
 		if (userRepository.existsByEmail(request.email())) {
 			throw new IllegalArgumentException("Email already registered");
 		}
-		
-		Role userRole = roleRepository.findByName("ROLE_USER")
-		        .orElseThrow();
 
-		User user = User.builder().userName(request.userName()).email(request.email())
-				.mobileNumber(request.mobileNumber()).password(passwordEncoder.encode(request.password()))
-				.roles(Set.of(userRole))
-				.status(UserStatus.ACTIVE)
+		Role userRole = roleRepository.findByName("ROLE_USER").orElseThrow();
+
+		User user = User.builder().userName(request.userName()).mobileNumber(request.mobileNumber()).email(request.email())
+				.password(passwordEncoder.encode(request.password())).roles(Set.of(userRole)).status(UserStatus.ACTIVE)
 				.build();
 
 		userRepository.save(user);
@@ -59,19 +56,19 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public TokenResponseDTO generateToken(TokenRequestDTO request) {
 
-		User user = userRepository.findByMobileNumber(request.mobileNumber())
+		User user = userRepository.findByEmail(request.email())
 				.orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
 		if (!passwordEncoder.matches(request.password(), user.getPassword())) {
 			throw new IllegalArgumentException("Invalid credentials");
 		}
-		
-		if(!user.getStatus().equals(UserStatus.ACTIVE))
+
+		if (!user.getStatus().equals(UserStatus.ACTIVE))
 			throw new IllegalArgumentException("User is not active");
 
-		String token = jwtService.generateToken(user.getId().toString(), user.getMobileNumber(), user.getRoles());
+		String token = jwtService.generateToken(user.getId().toString(), user.getEmail(), user.getRoles());
 
-		return new TokenResponseDTO(token, "Bearer", Constants.EXPIRATION_MS+"ms");
+		return new TokenResponseDTO(token, "Bearer", Constants.EXPIRATION_MS + "ms");
 	}
 
 }
