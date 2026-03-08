@@ -6,7 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,105 +43,144 @@ public class OrderService {
 	private final OutboxRepository outboxRepository;
 	private final ProductClient productClient;
 	private final PaymentClient paymentClient;
+	private final RedissonClient redissonClient;
 
+	/**
+	 * Creates an order. Uses a "Fail-Fast" lock to prevent double-click
+	 * submissions.
+	 */
 	@Transactional
 	public OrderResponse createOrder(OrderRequest request) {
-		log.info("Creating order for customer: {}", request.customerId());
+		// Key: unique to the customer to prevent duplicate clicks
+		String lockKey = "lock:order-create:" + request.customerId();
 
-		List<OrderItem> orderItems = request.items().stream().map(itemReq -> {
-			ProductViewDTO product = productClient.getProductBySku(itemReq.skuId());
-			return OrderItem.builder().skuId(product.skuId()).quantity(itemReq.quantity()).price(product.price())
-					.build();
-		}).toList();
+		// We use 0 wait time here because we want to fail immediately if a second click
+		// happens
+		return withLock(lockKey, 0, 15, () -> {
+			log.info("Creating order for customer: {}", request.customerId());
 
-		BigDecimal totalAmount = orderItems.stream()
-				.map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-				.reduce(BigDecimal.ZERO, BigDecimal::add);
+			List<OrderItem> orderItems = request.items().stream().map(itemReq -> {
+				ProductViewDTO product = productClient.getProductBySku(itemReq.skuId());
+				return OrderItem.builder().skuId(product.skuId()).quantity(itemReq.quantity()).price(product.price())
+						.build();
+			}).toList();
 
-		Order order = Order.builder().customerId(request.customerId()).customerEmail(request.customerEmail())
-				.status(OrderStatus.PENDING).totalAmount(totalAmount).shippingAddressLine1(request.addressLine1())
-				.shippingCity(request.city()).shippingZipCode(request.zipCode()).shippingCountry(request.country())
-				.items(orderItems).build();
+			BigDecimal totalAmount = orderItems.stream()
+					.map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+					.reduce(BigDecimal.ZERO, BigDecimal::add);
 
-		Order savedOrder = orderRepository.save(order);
+			Order order = Order.builder().customerId(request.customerId()).customerEmail(request.customerEmail())
+					.status(OrderStatus.PENDING).totalAmount(totalAmount).shippingAddressLine1(request.addressLine1())
+					.shippingCity(request.city()).shippingZipCode(request.zipCode()).shippingCountry(request.country())
+					.items(orderItems).build();
 
-		PaymentRequest paymentRequest = new PaymentRequest(savedOrder.getId(), savedOrder.getCustomerEmail() ,savedOrder.getTotalAmount());
-		Map<String, String> paymentResponse = paymentClient.initiate(paymentRequest);
+			Order savedOrder = orderRepository.save(order);
 
-		saveEventLog(savedOrder.getId(), "ORDER", "PENDING");
+			PaymentRequest paymentRequest = new PaymentRequest(savedOrder.getId(), savedOrder.getCustomerEmail(),
+					savedOrder.getTotalAmount());
+			Map<String, String> paymentResponse = paymentClient.initiate(paymentRequest);
 
-		saveToOutbox("ORDER", savedOrder.getId().toString(), "PENDING",
-				Map.of("orderId", order.getId(), "customerId", order.getCustomerId(), "customerEmail", order.getCustomerEmail(), "totalAmount",
-						order.getTotalAmount(), "status", order.getStatus(), "items", order.getItems()));
+			saveEventLog(savedOrder.getId(), "ORDER", "PENDING");
 
-		return new OrderResponse(savedOrder.getId(), "PENDING", totalAmount, paymentResponse.get("clientSecret"));
+			saveToOutbox("ORDER", savedOrder.getId().toString(), "PENDING",
+					Map.of("orderId", savedOrder.getId(), "customerId", savedOrder.getCustomerId(), "customerEmail",
+							savedOrder.getCustomerEmail(), "totalAmount", savedOrder.getTotalAmount(), "status",
+							savedOrder.getStatus(), "items", savedOrder.getItems()));
+
+			return new OrderResponse(savedOrder.getId(), "PENDING", totalAmount, paymentResponse.get("clientSecret"));
+		});
 	}
 
 	@Transactional
 	public void handleInventoryResponse(UUID orderId, boolean success) {
-		saveEventLog(orderId, "INVENTORY", success ? "SUCCESS" : "FAILURE");
-		verifyAndProcessOrder(orderId);
+		withLock("lock:order-process:" + orderId, 5, 10, () -> {
+			saveEventLog(orderId, "INVENTORY", success ? "SUCCESS" : "FAILURE");
+			verifyAndProcessOrder(orderId);
+		});
 	}
 
 	@Transactional
 	public void handlePaymentResponse(UUID orderId, String status) {
-		boolean success = "SUCCESS".equalsIgnoreCase(status);
-		saveEventLog(orderId, "PAYMENT", success ? "SUCCESS" : "FAILURE");
-		verifyAndProcessOrder(orderId);
+		withLock("lock:order-process:" + orderId, 5, 10, () -> {
+			boolean success = "SUCCESS".equalsIgnoreCase(status);
+			saveEventLog(orderId, "PAYMENT", success ? "SUCCESS" : "FAILURE");
+			verifyAndProcessOrder(orderId);
+		});
 	}
 
 	@Transactional
 	public void cancelOrder(UUID id) {
+		// No lock needed here as it's usually called inside an already locked method
+		// (verifyAndProcessOrder)
+		// Or we can add it for safety if called directly
 		Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order id not found: " + id));
 		order.setStatus(OrderStatus.CANCELLED);
 		orderRepository.save(order);
 		saveEventLog(order.getId(), "ORDER", "CANCELLED");
+
 		saveToOutbox("ORDER", order.getId().toString(), "CANCELLED",
 				Map.of("orderId", order.getId(), "customerEmail", order.getCustomerEmail(), "totalAmount",
 						order.getTotalAmount(), "status", order.getStatus(), "items", order.getItems()));
-		saveToOutbox("PAYMENT", order.getId().toString(), "REFUND",
-				Map.of("orderId", order.getId(), "customerEmail", order.getCustomerEmail(), "amount", order.getTotalAmount()));
 
+		saveToOutbox("PAYMENT", order.getId().toString(), "REFUND", Map.of("orderId", order.getId(), "customerEmail",
+				order.getCustomerEmail(), "amount", order.getTotalAmount()));
 	}
 
 	@Transactional
-	public void verifyAndProcessOrder(UUID orderId) {
+	public void updateShippingAddress(UUID orderId, Address newAddress) {
+		withLock("lock:order-process:" + orderId, 5, 10, () -> {
+			Order order = orderRepository.findById(orderId)
+					.orElseThrow(() -> new RuntimeException("Order " + orderId + " not found"));
+
+			if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED
+					|| order.getStatus() == OrderStatus.CANCELLED) {
+				throw new IllegalStateException("Address cannot be updated for order in status: " + order.getStatus());
+			}
+
+			order.setShippingAddressLine1(newAddress.shippingAddressLine1());
+			order.setShippingCity(newAddress.shippingCity());
+			order.setShippingZipCode(newAddress.shippingZipCode());
+			order.setShippingCountry(newAddress.shippingCountry());
+			orderRepository.save(order);
+			saveEventLog(order.getId(), "SHIPPING-ADDRESS", "UPDATED");
+			log.info("Address updated for Order: {}", orderId);
+		});
+	}
+
+	/**
+	 * Logic to check if both Inventory and Payment are received.
+	 */
+	private void verifyAndProcessOrder(UUID orderId) {
 		List<OrderEvent> events = orderEventRepository.findByOrderId(orderId);
 		Order order = orderRepository.findById(orderId).orElseThrow();
 
 		if (order.getStatus() != OrderStatus.PENDING)
 			return;
 
-		Optional<OrderEvent> invEvent = events.stream().filter(e -> "INVENTORY".equals(e.getEventType()))
-				.findFirst();
-		Optional<OrderEvent> payEvent = events.stream().filter(e -> "PAYMENT".equals(e.getEventType()))
-				.findFirst();
+		Optional<OrderEvent> invEvent = events.stream().filter(e -> "INVENTORY".equals(e.getEventType())).findFirst();
+		Optional<OrderEvent> payEvent = events.stream().filter(e -> "PAYMENT".equals(e.getEventType())).findFirst();
 
-		// Check for Failures
-		boolean isInvFailed = invEvent.isPresent() && "FAILURE".equals(invEvent.get().getStatus());
-		boolean isPayFailed = payEvent.isPresent() && "FAILURE".equals(payEvent.get().getStatus());
-
-		if (isInvFailed || isPayFailed) {
+		if ((invEvent.isPresent() && "FAILURE".equals(invEvent.get().getStatus()))
+				|| (payEvent.isPresent() && "FAILURE".equals(payEvent.get().getStatus()))) {
 			cancelOrder(order.getId());
 			return;
 		}
 
-		// Check for Successes
-		boolean isInvSuccess = invEvent.isPresent() && "SUCCESS".equals(invEvent.get().getStatus());
-		boolean isPaySuccess = payEvent.isPresent() && "SUCCESS".equals(payEvent.get().getStatus());
+		if (invEvent.isPresent() && "SUCCESS".equals(invEvent.get().getStatus()) && payEvent.isPresent()
+				&& "SUCCESS".equals(payEvent.get().getStatus())) {
 
-		if (isInvSuccess && isPaySuccess) {
 			order.setStatus(OrderStatus.CONFIRMED);
 			orderRepository.save(order);
 			saveEventLog(order.getId(), "ORDER", "CONFIRMED");
+
 			saveToOutbox("ORDER", order.getId().toString(), "CONFIRMED",
-					Map.of("orderId", order.getId(), "customerId", order.getCustomerId(), "customerEmail", order.getCustomerEmail(), "totalAmount",
-							order.getTotalAmount(), "status", order.getStatus(), "items", order.getItems()));
+					Map.of("orderId", order.getId(), "customerId", order.getCustomerId(), "customerEmail",
+							order.getCustomerEmail(), "totalAmount", order.getTotalAmount(), "status",
+							order.getStatus(), "items", order.getItems()));
 		}
 	}
 
 	private void saveEventLog(UUID orderId, String type, String status) {
-
 		OrderEvent event = orderEventRepository.findByOrderIdAndEventType(orderId, type)
 				.orElseGet(() -> OrderEvent.builder().orderId(orderId).eventType(type).build());
 		event.setStatus(status);
@@ -150,24 +193,39 @@ public class OrderService {
 				.payload(payload).build());
 	}
 
-	@Transactional
-	public void updateShippingAddress(UUID orderId, Address newAddress) {
-		Order order = orderRepository.findById(orderId)
-				.orElseThrow(() -> new RuntimeException("Order " + orderId + " not found"));
+	// ==========================================
+	// REDIS LOCK HELPERS
+	// ==========================================
 
-		// Validation: Only allow update if order is in a changeable state
-		if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED
-				|| order.getStatus() == OrderStatus.CANCELLED) {
-			throw new IllegalStateException("Address cannot be updated for order in status: " + order.getStatus());
+	/**
+	 * Helper for methods that return a value (like createOrder)
+	 */
+	private <T> T withLock(String lockKey, int waitTime, int leaseTime, Supplier<T> action) {
+		RLock lock = redissonClient.getLock(lockKey);
+		boolean isLocked = false;
+		try {
+			isLocked = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
+			if (!isLocked) {
+				throw new RuntimeException("Operation in progress for key: " + lockKey + ". Please try again.");
+			}
+			return action.get();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException("Lock acquisition interrupted", e);
+		} finally {
+			if (isLocked) {
+				lock.unlock();
+			}
 		}
+	}
 
-		// Direct mapping
-		order.setShippingAddressLine1(newAddress.shippingAddressLine1());
-		order.setShippingCity(newAddress.shippingCity());
-		order.setShippingZipCode(newAddress.shippingZipCode());
-		order.setShippingCountry(newAddress.shippingCountry());
-		orderRepository.save(order);
-		saveEventLog(order.getId(), "SHIPPING-ADDRESS", "UPDATED");
-		log.info("Address updated for Order: {}", orderId);
+	/**
+	 * Helper for void methods (like handleResponse)
+	 */
+	private void withLock(String lockKey, int waitTime, int leaseTime, Runnable action) {
+		withLock(lockKey, waitTime, leaseTime, () -> {
+			action.run();
+			return null;
+		});
 	}
 }
