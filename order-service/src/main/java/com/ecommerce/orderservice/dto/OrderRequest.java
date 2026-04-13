@@ -1,0 +1,13 @@
+package com.ecommerce.orderservice.dto;
+
+import java.util.List;
+import java.util.UUID;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
+public record OrderRequest(@NotNull UUID customerId, @NotBlank String customerEmail,
+		@NotBlank String shippingAddressLine1, @NotBlank String shippingCity, @NotBlank String shippingZipCode,
+		@NotBlank String shippingCountry, @NotEmpty List<OrderItemRequest> items) {
+}

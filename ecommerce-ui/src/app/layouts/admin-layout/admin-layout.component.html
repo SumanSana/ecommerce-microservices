@@ -1,0 +1,59 @@
+<div class="admin-wrapper d-flex">
+  <aside class="sidebar bg-dark text-white d-flex flex-column flex-shrink-0 shadow-lg">
+    <div class="sidebar-header p-4 border-bottom border-secondary">
+      <a routerLink="/" class="d-flex align-items-center text-white text-decoration-none">
+        <i class="bi bi-shop-window fs-3 text-warning me-2"></i>
+        <span class="fs-4 fw-bold">FootKart <span class="text-warning">PRO</span></span>
+      </a>
+    </div>
+
+    <ul class="nav nav-pills flex-column mb-auto p-3 gap-2">
+      <li class="nav-item">
+        <a routerLink="/admin/inventory" 
+           routerLinkActive="active" 
+           class="nav-link text-white d-flex align-items-center py-3 px-3 rounded-3">
+          <i class="bi bi-grid-1x2 me-3 fs-5"></i>
+          <span>Inventory Management</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a routerLink="/admin/manage-product" 
+           routerLinkActive="active" 
+           class="nav-link text-white d-flex align-items-center py-3 px-3 rounded-3">
+          <i class="bi bi-box-seam me-3 fs-5"></i>
+          <span>Product Management</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a routerLink="/admin/order-track" 
+           routerLinkActive="active" 
+           class="nav-link text-white d-flex align-items-center py-3 px-3 rounded-3">
+          <i class="bi bi-truck me-3 fs-5"></i>
+          <span>Customer Orders</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer p-3 border-top border-secondary mt-auto">
+      <a routerLink="/" class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center">
+        <i class="bi bi-box-arrow-left me-2"></i> Exit Admin
+      </a>
+    </div>
+  </aside>
+
+  <div class="main-content flex-grow-1 bg-light">
+    <nav class="navbar navbar-white bg-white border-bottom sticky-top py-3 px-4 shadow-sm">
+      <h5 class="mb-0 fw-bold text-secondary">Dashboard</h5>
+      <div class="d-flex align-items-center">
+        <span class="me-3 text-muted small">Logged in as: <strong>Admin</strong></span>
+        <i class="bi bi-person-circle fs-4 text-dark"></i>
+      </div>
+    </nav>
+
+    <div class="content-container p-4">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

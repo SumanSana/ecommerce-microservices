@@ -1,0 +1,19 @@
+eureka:
+  client:
+    service:
+      url: http://localhost:8761/eureka
+
+jwt:
+  secret: "NqpdMZZKFUiKF2Dk5grvTQZZFqRvCZPUoZejzYlo9kY="
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+      connect-timeout: 5000ms
+      redisson:
+        threads: 16
+        netty-threads: 32

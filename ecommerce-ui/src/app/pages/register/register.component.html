@@ -1,0 +1,71 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">Create Account</h3>
+        </div>
+        <div class="card-body">
+          
+          <div *ngIf="errorMessage" class="alert alert-danger">
+            {{ errorMessage }}
+          </div>
+
+          <form *ngIf="registerForm" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">First Name</label>
+                <input type="text" formControlName="firstName" class="form-control" 
+                       [ngClass]="{'is-invalid': registerForm.get('firstName')?.touched && registerForm.get('firstName')?.invalid}">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Last Name</label>
+                <input type="text" formControlName="lastName" class="form-control"
+                       [ngClass]="{'is-invalid': registerForm.get('lastName')?.touched && registerForm.get('lastName')?.invalid}">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Email Address</label>
+              <input type="email" formControlName="email" class="form-control"
+                     [ngClass]="{'is-invalid': registerForm.get('email')?.touched && registerForm.get('email')?.invalid}">
+              <div class="invalid-feedback">Please enter a valid email.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Mobile Number</label>
+              <input type="text" formControlName="mobile" class="form-control"
+                     [ngClass]="{'is-invalid': registerForm.get('mobile')?.touched && registerForm.get('mobile')?.invalid}">
+              <div class="invalid-feedback">Enter a valid 10-digit number.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" formControlName="password" class="form-control"
+                     [ngClass]="{'is-invalid': registerForm.get('password')?.touched && registerForm.get('password')?.invalid}">
+              <div class="invalid-feedback">Password must be at least 6 characters.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Confirm Password</label>
+              <input type="password" formControlName="confirmPassword" class="form-control"
+                     [ngClass]="{'is-invalid': (registerForm.touched && registerForm.errors?.['passwordMismatch']) || (registerForm.get('confirmPassword')?.touched && registerForm.get('confirmPassword')?.invalid)}">
+              <div class="invalid-feedback" *ngIf="registerForm.errors?.['passwordMismatch']">
+                Passwords do not match.
+              </div>
+            </div>
+
+            <div class="d-grid gap-2 mt-4">
+              <button type="submit" class="btn btn-primary" [disabled]="loading">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+                {{ loading ? 'Registering...' : 'Register' }}
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
