@@ -1,0 +1,48 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white text-center">
+          <h4 class="mb-0">User Login</h4>
+        </div>
+        <div class="card-body p-4">
+
+          <div *ngIf="errorMessage" class="alert alert-danger py-2">
+            {{ errorMessage }}
+          </div>
+
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+            
+            <div class="mb-3">
+              <label class="form-label">Email Address</label>
+              <input type="email" formControlName="email" class="form-control"
+                     [ngClass]="{'is-invalid': loginForm.get('email')?.touched && loginForm.get('email')?.invalid}">
+              <div class="invalid-feedback">Please enter a valid email.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" formControlName="password" class="form-control"
+                     [ngClass]="{'is-invalid': loginForm.get('password')?.touched && loginForm.get('password')?.invalid}">
+              <div class="invalid-feedback">Password is required.</div>
+            </div>
+
+            <div class="d-grid gap-2 mt-4">
+              <button type="submit" class="btn btn-success" [disabled]="loading">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+                {{ loading ? 'Authenticating...' : 'Login' }}
+              </button>
+            </div>
+
+            <div class="text-center mt-3">
+              <p class="small mb-0">Don't have an account? 
+                <a routerLink="/register" class="text-decoration-none">Register here</a>
+              </p>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

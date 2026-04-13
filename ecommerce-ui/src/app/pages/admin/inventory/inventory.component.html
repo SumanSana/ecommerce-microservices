@@ -1,0 +1,98 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+      <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="bg-primary p-4 text-white">
+          <h4 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2"></i>Inventory Management</h4>
+        </div>
+
+        <div class="card-body p-4">
+          @if (successMessage()) {
+            <div class="alert alert-success border-0 shadow-sm rounded-3 mb-4">
+              <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage() }}
+            </div>
+          }
+
+          <form [formGroup]="inventoryForm" (ngSubmit)="onSubmit()">
+            
+            <div class="mb-4 position-relative">
+              <label class="form-label fw-semibold">SKU Identifier</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input 
+                  type="text" 
+                  formControlName="skuId" 
+                  class="form-control border-start-0 ps-0 shadow-none" 
+                  placeholder="Type or select SKU..."
+                  (click)="onInputClick()"
+                  (blur)="isDropdownOpen.set(false)"
+                  autocomplete="off">
+              </div>
+
+              @if (isDropdownOpen() && skuSuggestions().length > 0) {
+                <div class="position-absolute w-100 shadow-lg z-3 mt-1 bg-white border rounded-3 overflow-auto" 
+                     style="max-height: 200px;">
+                  <div class="list-group list-group-flush">
+                    @for (sku of skuSuggestions(); track sku) {
+                      <button 
+                        type="button" 
+                        class="list-group-item list-group-item-action py-2 px-3 border-0 d-flex align-items-center"
+                        (mousedown)="selectSku(sku)">
+                        <i class="bi bi-tag-fill me-2 text-primary opacity-50"></i>
+                        <span>{{ sku }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            @if (availableQuantity() !== null) {
+              <div class="mb-4 animate__animated animate__fadeIn">
+                <label class="form-label fw-semibold text-primary">Current Available Stock</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-primary-subtle border-0"><i class="bi bi-info-circle-fill text-primary"></i></span>
+                  <input 
+                    type="text" 
+                    [value]="availableQuantity() + ' units currently in hand'" 
+                    class="form-control bg-primary-subtle border-0 fw-bold text-primary shadow-none" 
+                    readonly>
+                </div>
+              </div>
+            }
+
+            <div class="row g-3 mb-4">
+              <div class="col-6">
+                <label class="form-label fw-semibold">Quantity to Adjust</label>
+                <input type="number" formControlName="quantity" class="form-control shadow-none" min="1">
+              </div>
+              
+              <div class="col-6">
+                <label class="form-label fw-semibold">Transaction Type</label>
+                <select formControlName="transactionType" class="form-select shadow-none">
+                  <option value="INBOUND">INBOUND (+)</option>
+                  <option value="OUTBOUND">OUTBOUND (-)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Notes (Optional)</label>
+              <textarea formControlName="comment" class="form-control shadow-none" rows="2" placeholder="e.g., Weekly restock..."></textarea>
+            </div>
+
+            <button type="submit" 
+                    class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm" 
+                    [disabled]="inventoryForm.invalid || isSubmitting()">
+              @if (isSubmitting()) {
+                <span class="spinner-border spinner-border-sm me-2"></span>Processing...
+              } @else {
+                Save Stock Adjustment
+              }
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

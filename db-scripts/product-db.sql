@@ -14,13 +14,14 @@ CREATE TABLE categories (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
     brand_id UUID REFERENCES brands(id),
     category_id UUID REFERENCES categories(id),
-    status VARCHAR(1) NOT NULL CHECK (status IN ('A', 'N')),
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -29,9 +30,10 @@ CREATE TABLE product_variants (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     product_id UUID REFERENCES products(id) ON DELETE CASCADE,
     sku_id VARCHAR(100) UNIQUE NOT NULL,
-    status VARCHAR(20) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
     price DECIMAL(10, 2) NOT NULL,
     attributes JSONB,
+    image_url VARCHAR(500),
     version INT DEFAULT 0, 
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()

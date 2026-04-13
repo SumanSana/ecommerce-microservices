@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecommerce.inventoryservice.dto.OrderEvent;
 import com.ecommerce.inventoryservice.dto.OrderItem;
+import com.ecommerce.inventoryservice.dto.Product;
 import com.ecommerce.inventoryservice.dto.StockAdjustmentRequest;
 import com.ecommerce.inventoryservice.entity.Inventory;
 import com.ecommerce.inventoryservice.entity.InventoryOutbox;
@@ -34,21 +35,27 @@ public class InventoryService {
 	private final RedissonClient redissonClient; // Added Redisson
 
 	@Transactional
-	public void initializeInventory(String skuId) {
+	public void initializeInventory(Product product) {
 		// Use a simple lock for single SKU operations
-		withSingleLock(skuId, () -> {
-			if (!inventoryRepository.existsBySkuId(skuId)) {
-				log.info("Initializing inventory record for new SKU: {}", skuId);
-				Inventory inventory = new Inventory();
-				inventory.setSkuId(skuId);
-				inventory.setTotalQuantity(0);
-				inventory.setReservedQuantity(0);
-				inventoryRepository.save(inventory);
-				recordTransaction(skuId, 0, "INITIALIZATION", "SKU_INIT", skuId);
-			} else {
-				log.warn("Attempted to initialize existing SKU: {}", skuId);
-			}
-		});
+		if (product.variants() != null) {
+			product.variants().forEach(v -> {
+				withSingleLock(v.skuId(), () -> {
+					if (!inventoryRepository.existsBySkuId(v.skuId())) {
+						log.info("Initializing inventory record for new SKU: {}", v.skuId());
+						Inventory inventory = new Inventory();
+						inventory.setSkuId(v.skuId());
+						inventory.setTotalQuantity(0);
+						inventory.setReservedQuantity(0);
+						inventoryRepository.save(inventory);
+						recordTransaction(v.skuId(), 0, "INITIALIZATION", "SKU_INIT", v.skuId(),
+								"Inventory intialization");
+					} else {
+						log.warn("Attempted to initialize existing SKU: {}", v.skuId());
+					}
+				});
+			});
+		}
+
 	}
 
 	/**
@@ -61,13 +68,13 @@ public class InventoryService {
 					.orElseThrow(() -> new RuntimeException("Skuid not found: " + request.skuId()));
 
 			int curQuantity = inventory.getTotalQuantity();
-			int updatedQuantity = request.transactionType().equals("INBOUND") ? curQuantity + request.adjustment()
-					: curQuantity - request.adjustment();
-			
+			int updatedQuantity = request.transactionType().equals("INBOUND") ? curQuantity + request.quantity()
+					: curQuantity - request.quantity();
+
 			inventory.setTotalQuantity(updatedQuantity);
 			inventoryRepository.save(inventory);
-			recordTransaction(request.skuId(), request.adjustment(), request.transactionType(), "SKU_ADJUSTMENT",
-					request.skuId());
+			recordTransaction(request.skuId(), request.quantity(), request.transactionType(), "SKU_ADJUSTMENT",
+					request.skuId(), request.comment());
 		});
 	}
 
@@ -87,7 +94,8 @@ public class InventoryService {
 					log.warn("Insufficient derived availability for SKU: {}", item.skuId());
 					throw new RuntimeException("Insufficient stock for SKU: " + item.skuId());
 				}
-				recordTransaction(item.skuId(), item.quantity(), "OUTBOUND", "ORDER_RESERVED", event.orderId().toString());
+				recordTransaction(item.skuId(), item.quantity(), "OUTBOUND", "ORDER_RESERVED",
+						event.orderId().toString(), "stock reserve");
 			}
 		});
 	}
@@ -98,12 +106,14 @@ public class InventoryService {
 	@Transactional
 	public void commitStock(OrderEvent event) {
 		withMultiLock(event, () -> {
-			if (transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(), "ORDER_CONFIRMED"))
+			if (transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(),
+					"ORDER_CONFIRMED"))
 				return;
-				
+
 			for (OrderItem item : event.items()) {
 				inventoryRepository.commitStock(item.skuId(), item.quantity());
-				recordTransaction(item.skuId(), item.quantity(), "OUTBOUND", "ORDER_CONFIRMED", event.orderId().toString());
+				recordTransaction(item.skuId(), item.quantity(), "OUTBOUND", "ORDER_CONFIRMED",
+						event.orderId().toString(), "commit stock");
 			}
 		});
 	}
@@ -114,28 +124,33 @@ public class InventoryService {
 	@Transactional
 	public void releaseStock(OrderEvent event) {
 		withMultiLock(event, () -> {
-			if (transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(), "ORDER_CANCELLED"))
+			if (transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(),
+					"ORDER_CANCELLED"))
 				return;
-			if (!transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(), "ORDER_RESERVED"))
+			if (!transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(),
+					"ORDER_RESERVED"))
 				return;
-				
-			if (transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(), "ORDER_CONFIRMED")) {
+
+			if (transactionRepository.existsByReferenceIdAndReferenceType(event.orderId().toString(),
+					"ORDER_CONFIRMED")) {
 				for (OrderItem item : event.items()) {
 					inventoryRepository.rollbackInventoryForCancelledOrder(item.skuId(), item.quantity());
-					recordTransaction(item.skuId(), item.quantity(), "INBOUND", "ORDER_CANCELLED", event.orderId().toString());
+					recordTransaction(item.skuId(), item.quantity(), "INBOUND", "ORDER_CANCELLED",
+							event.orderId().toString(), "order cancel");
 				}
 			} else {
 				for (OrderItem item : event.items()) {
 					inventoryRepository.releaseStock(item.skuId(), item.quantity());
-					recordTransaction(item.skuId(), item.quantity(), "INBOUND", "ORDER_CANCELLED", event.orderId().toString());
+					recordTransaction(item.skuId(), item.quantity(), "INBOUND", "ORDER_CANCELLED",
+							event.orderId().toString(), "order cancel");
 				}
 			}
 		});
 	}
 
 	/**
-	 * AVAILABILITY CHECK (Derived)
-	 * No lock needed here, dirty reads are fine for display purposes.
+	 * AVAILABILITY CHECK (Derived) No lock needed here, dirty reads are fine for
+	 * display purposes.
 	 */
 	@Transactional(readOnly = true)
 	public int getAvailableQuantity(String skuId) {
@@ -143,11 +158,8 @@ public class InventoryService {
 				.orElse(0);
 	}
 
-	// ==========================================
-	// HELPER METHODS
-	// ==========================================
-
-	private void recordTransaction(String skuId, int qty, String transactionType, String refType, String refId) {
+	private void recordTransaction(String skuId, int qty, String transactionType, String refType, String refId,
+			String comments) {
 		Inventory inventory = inventoryRepository.findBySkuId(skuId).orElseThrow();
 
 		// Audit Trail
@@ -158,6 +170,7 @@ public class InventoryService {
 		tx.setReferenceType(refType);
 		tx.setReferenceId(refId);
 		tx.setQuantityChanged(qty);
+		tx.setNotes(comments);
 		transactionRepository.save(tx);
 
 		if (!refType.equals("INITIALIZATION")) {
@@ -181,15 +194,10 @@ public class InventoryService {
 	 */
 	private void withMultiLock(OrderEvent event, Runnable action) {
 		// 1. Sort SKUs lexicographically to prevent deadlocks
-		List<String> sortedSkus = event.items().stream()
-				.map(OrderItem::skuId)
-				.distinct()
-				.sorted()
-				.toList();
+		List<String> sortedSkus = event.items().stream().map(OrderItem::skuId).distinct().sorted().toList();
 
 		// 2. Prepare locks
-		RLock[] locks = sortedSkus.stream()
-				.map(sku -> redissonClient.getLock("lock:inventory:" + sku))
+		RLock[] locks = sortedSkus.stream().map(sku -> redissonClient.getLock("lock:inventory:" + sku))
 				.toArray(RLock[]::new);
 
 		RLock multiLock = redissonClient.getMultiLock(locks);
@@ -202,7 +210,7 @@ public class InventoryService {
 				log.error("Failed to acquire MultiLock for Order: {}", event.orderId());
 				throw new RuntimeException("System busy processing inventory. Please try again.");
 			}
-			
+
 			// 4. Execute the DB logic
 			action.run();
 
@@ -230,7 +238,7 @@ public class InventoryService {
 				log.error("Failed to acquire lock for SKU: {}", skuId);
 				throw new RuntimeException("System busy processing SKU: " + skuId);
 			}
-			
+
 			action.run();
 
 		} catch (InterruptedException e) {

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.ecommerce.inventoryservice.dto.InventoryResponseEvent;
 import com.ecommerce.inventoryservice.dto.OrderEvent;
-import com.ecommerce.inventoryservice.dto.ProductInitEvent;
+import com.ecommerce.inventoryservice.dto.Product;
 import com.ecommerce.inventoryservice.service.InventoryService;
 
 import lombok.RequiredArgsConstructor;
@@ -23,12 +23,9 @@ public class InventoryConsumer {
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 
 	@KafkaListener(topics = "inventory-init-topic", containerFactory="productInit")
-	public void handleProductCreated(ProductInitEvent product) {
+	public void handleProductCreated(Product product) {
 		log.info("Received payload: {}", product);
-
-		String skuId = product.skuId();
-		log.info("Received product created event for SKU: {}", skuId);
-		inventoryService.initializeInventory(skuId);
+		inventoryService.initializeInventory(product);
 	}
 
 	@KafkaListener(topics = "order-events-topic", containerFactory="orderEvent")

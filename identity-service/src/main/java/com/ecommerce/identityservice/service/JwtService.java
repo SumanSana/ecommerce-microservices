@@ -1,8 +1,6 @@
 package com.ecommerce.identityservice.service;
 
-import java.util.Set;
-
-import com.ecommerce.identityservice.entity.Role;
+import com.ecommerce.identityservice.entity.User;
 
 import io.jsonwebtoken.Claims;
 
@@ -10,5 +8,7 @@ public interface JwtService {
 
 	public Claims validateAndGetClaims(String token);
 
-	public String generateToken(String userId, String mobileNumber, Set<Role> roles);
+	public String generateRefreshToken(String userId);
+
+	String generateToken(User user);
 }

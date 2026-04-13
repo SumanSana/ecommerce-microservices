@@ -11,6 +11,8 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -34,13 +36,14 @@ public class ProductVariant {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "product_id")
+	@JsonIgnore
 	private Product product;
 
 	@Column(name = "sku_id", unique = true, nullable = false)
 	private String skuId;
 
 	@Column(name = "status")
-	private String status = "ACTIVE";
+	private String status;
 
 	@Column(nullable = false)
 	private BigDecimal price;
@@ -48,6 +51,9 @@ public class ProductVariant {
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(columnDefinition = "jsonb")
 	private Map<String, Object> attributes;
+
+	@Column(name = "image_url")
+	private String imageUrl;
 
 	@CreatedDate
 	@Column(updatable = false, nullable = false)

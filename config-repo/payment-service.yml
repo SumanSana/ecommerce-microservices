@@ -26,10 +26,9 @@ spring:
 
 stripe:
   api:
-    key: ${stripe_key}
+    key: sk_test
   webhook:
-    secret: ${webhook-key}
-
+    secret: whsec
 logging:
   level:
     root: INFO

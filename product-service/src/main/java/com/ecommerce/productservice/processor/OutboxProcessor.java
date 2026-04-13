@@ -32,19 +32,15 @@ public class OutboxProcessor {
 			try {
 
 				log.info("DEBUG: Sending Payload -> {}", event.getPayload());
-				// Publish to Kafka, We use the aggregateId as the Kafka Key to ensure ordering
 				kafkaTemplate.send("product-sync-topic", event.getAggregateId(), event.getPayload());
-				if (event.getType().equals("PRODUCT_CREATED"))
+				if (event.getType().contains("PRODUCT"))
 					kafkaTemplate.send("inventory-init-topic", event.getAggregateId(), event.getPayload());
-
-				// Mark as processed
+				
 				event.setProcessedAt(Instant.now());
 				outboxRepository.save(event);
-
 				log.info("Relayed event {} to Kafka topic", event.getId());
 			} catch (Exception e) {
 				log.error("Failed to publish event {}: {}", event.getId(), e.getMessage());
-				// We don't mark as processed, so it will retry in the next 5 seconds
 			}
 		}
 	}

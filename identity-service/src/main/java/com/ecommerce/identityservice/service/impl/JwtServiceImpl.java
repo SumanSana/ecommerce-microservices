@@ -2,7 +2,6 @@ package com.ecommerce.identityservice.service.impl;
 
 import java.time.Instant;
 import java.util.Date;
-import java.util.Set;
 
 import javax.crypto.SecretKey;
 
@@ -10,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ecommerce.identityservice.constant.Constants;
-import com.ecommerce.identityservice.entity.Role;
+import com.ecommerce.identityservice.entity.User;
 import com.ecommerce.identityservice.service.JwtService;
 
 import io.jsonwebtoken.Claims;
@@ -28,17 +27,26 @@ public class JwtServiceImpl implements JwtService {
 	}
 
 	@Override
-	public String generateToken(String userId, String email, Set<Role> roles) {
-
+	public String generateToken(User user) {
 		Instant now = Instant.now();
 
-		return Jwts.builder().subject(userId).claim("email", email).claim("roles", roles).issuedAt(Date.from(now))
-				.expiration(Date.from(now.plusMillis(Constants.EXPIRATION_MS))).signWith(key, Jwts.SIG.HS256).compact();
+		return Jwts.builder().subject(user.getId().toString()).claim("firstName", user.getFirstName())
+				.claim("lastName", user.getLastName()).claim("email", user.getEmail()).claim("role", user.getRole())
+				.issuedAt(Date.from(now)).expiration(Date.from(now.plusMillis(Constants.EXPIRATION_MS)))
+				.signWith(key, Jwts.SIG.HS256).compact();
+	}
+
+	@Override
+	public String generateRefreshToken(String userId) {
+		Instant now = Instant.now();
+
+		return Jwts.builder().subject(userId).issuedAt(Date.from(now))
+				.expiration(Date.from(now.plusMillis(Constants.REFRESH_EXPIRATION_MS))).signWith(key, Jwts.SIG.HS256)
+				.compact();
 	}
 
 	@Override
 	public Claims validateAndGetClaims(String token) {
-
 		return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
 	}
 }

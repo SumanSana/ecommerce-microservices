@@ -47,7 +47,7 @@ public class Product {
 	private Category category;
 
 	@Column(name="status")
-	private String status = "A";
+	private String status;
 
 	@OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
 	private List<ProductVariant> variants;

@@ -1,8 +1,7 @@
 package com.ecommerce.productservice.entity;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Map;
+import java.util.List;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -23,20 +22,15 @@ import lombok.NoArgsConstructor;
 public class ProductView {
 
 	@Id
-	private String skuId;
 	private String productId;
 	private String name;
 	private String description;
 	private String brandName;
 	private String categoryName;
 	private String status;
-	private BigDecimal price;
 
-	private Integer availableQuantity;
-	private boolean inStock;
-	private String stockLabel;
-
-	private Map<String, Object> attributes;
+	// The Source of Truth for prices
+	private List<VariantView> variants;
 
 	@Version
 	private Long version;
@@ -46,4 +40,5 @@ public class ProductView {
 
 	@LastModifiedDate
 	private Instant lastSyncedAt;
+
 }

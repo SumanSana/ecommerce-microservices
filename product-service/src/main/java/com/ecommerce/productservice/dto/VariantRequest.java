@@ -9,5 +9,6 @@ import jakarta.validation.constraints.NotNull;
 public record VariantRequest(
 	    @NotBlank String skuId,
 	    @NotNull BigDecimal price,
-	    Map<String, Object> attributes
+	    Map<String, Object> attributes,
+	    @NotNull String imageUrl
 	) {}

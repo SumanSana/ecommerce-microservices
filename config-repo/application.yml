@@ -14,7 +14,6 @@ spring:
       password: ${REDIS_PASSWORD:}
       timeout: 5000ms
       connect-timeout: 5000ms
-      # Redisson specific settings (custom properties)
       redisson:
         threads: 16
         netty-threads: 32

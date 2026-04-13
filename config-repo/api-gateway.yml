@@ -1,14 +1,30 @@
 server:
   port: 8080
-  
+
 spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
   cloud:
     gateway:
+      # This applies to ALL routes defined below
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 20
+            key-resolver: "#{@ipKeyResolver}"
+            
       routes:
-        - id: identity-service 
+        - id: identity-auth-service
           uri: lb://IDENTITY-SERVICE
           predicates:
-            - Path=/ekart/v1/auth/** 
+            - Path=/ekart/v1/auth/**
+        - id: identity-management-service
+          uri: lb://IDENTITY-SERVICE
+          predicates:
+            - Path=/ekart/v1/identity/**
         - id: product-service
           uri: lb://PRODUCT-SERVICE
           predicates:

@@ -7,7 +7,7 @@ public record StockAdjustmentRequest(@NotBlank(message = "SKU ID is required") S
 
 		@NotBlank(message = "Transaction type is required") String transactionType,
 
-		@Min(value = 1, message = "Adjustment must be at least 1") int adjustment,
+		@Min(value = 1, message = "Adjustment must be at least 1") int quantity,
 
-		@NotBlank(message = "Reason is required") String reason) {
+		@NotBlank(message = "Comment is required") String comment) {
 }

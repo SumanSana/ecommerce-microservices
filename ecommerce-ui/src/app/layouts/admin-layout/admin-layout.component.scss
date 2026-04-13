@@ -1,0 +1,38 @@
+.admin-wrapper {
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Customizing the active link state for the sidebar */
+.sidebar .nav-link {
+  transition: all 0.3s ease;
+  opacity: 0.8;
+}
+
+.sidebar .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}
+
+.sidebar .nav-link.active {
+  background-color: #ffc107 !important; /* Warning color */
+  color: #212529 !important; /* Dark text for contrast */
+  font-weight: 600;
+  opacity: 1;
+}
+
+.main-content {
+  overflow-y: auto;
+}
+
+.content-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}

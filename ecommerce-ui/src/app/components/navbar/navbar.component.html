@@ -1,0 +1,107 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm sticky-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold d-flex align-items-center" routerLink="/">
+      <i class="bi bi-shop me-2 fs-4 text-warning"></i>
+      <span>FootKart</span>
+    </a>
+
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navContent">
+
+      <form *ngIf="authService.isLoggedIn()" class="d-flex mx-auto col-lg-5 my-2 my-lg-0">
+        <div class="input-group">
+          <input class="form-control border-0 shadow-none" type="search" placeholder="Search for kicks..."
+            (input)="onSearch($event)">
+          <button class="btn btn-light border-0" type="button">
+            <i class="bi bi-search text-muted"></i>
+          </button>
+        </div>
+      </form>
+
+      <ul class="navbar-nav ms-auto align-items-center">
+
+        <ng-container *ngIf="authService.isLoggedIn()">
+
+          <li class="nav-item" *ngIf="authService.currentUser()?.role?.includes('ADMIN'); else userNav">
+            <a class="nav-link text-warning px-3 fw-bold" routerLink="/admin">
+              <i class="bi bi-speedometer2 me-1"></i>Admin Panel
+            </a>
+          </li>
+
+          <ng-template #userNav>
+            <li class="nav-item">
+              <a class="nav-link px-3" routerLink="/" routerLinkActive="active"
+                [routerLinkActiveOptions]="{exact: true}">
+                <i class="bi bi-bag-heart me-1"></i>Shop
+              </a>
+            </li>
+
+            <li class="nav-item ms-lg-2">
+              <a class="nav-link position-relative px-3" routerLink="/cart" routerLinkActive="active">
+                <i class="bi bi-cart3 fs-5"></i>
+                <span class="position-absolute top-1 start-100 translate-middle badge rounded-pill bg-danger"
+                  *ngIf="cartService.getCartCount() > 0" style="font-size: 0.65rem;">
+                  {{ cartService.getCartCount() }}
+                </span>
+              </a>
+            </li>
+          </ng-template>
+        </ng-container>
+
+        <li class="nav-item ms-lg-3">
+          <ng-container *ngIf="!authService.isLoggedIn(); else userMenu">
+            <div class="d-flex gap-2">
+              <a class="btn btn-outline-light btn-sm px-3 rounded-pill" routerLink="/login">Login</a>
+              <a class="btn btn-warning btn-sm px-3 fw-bold rounded-pill" routerLink="/register">Register</a>
+            </div>
+          </ng-container>
+
+          <ng-template #userMenu>
+            <div class="dropdown">
+              <button class="btn btn-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2 border-0"
+                type="button" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: #3d444b;">
+                <i class="bi bi-person-circle fs-6"></i>
+                <span class="d-none d-md-inline fw-semibold">
+                  Hi, {{ authService.currentUser()?.firstName }}
+                </span>
+              </button>
+
+              <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2">
+                <li class="px-3 py-2 border-bottom">
+                  <p class="mb-0 small fw-bold text-truncate" style="max-width: 150px;">
+                    {{ authService.currentUser()?.firstName }} {{ authService.currentUser()?.lastName }}
+                  </p>
+                  <small class="text-muted d-block text-truncate" style="max-width: 150px;">
+                    {{ authService.currentUser()?.email }}
+                  </small>
+                </li>
+                <li>
+                  <a class="dropdown-item py-2 mt-1 rounded" routerLink="/profile">
+                    <i class="bi bi-person me-2"></i>My Profile
+                  </a>
+                </li>
+                <li *ngIf="authService.currentUser()?.role?.includes('USER')">
+                  <a class="dropdown-item py-2 rounded" routerLink="/my-orders">
+                    <i class="bi bi-receipt me-2"></i>My Orders
+                  </a>
+                </li>
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+                <li>
+                  <button class="dropdown-item py-2 text-danger rounded" (click)="logout()">
+                    <i class="bi bi-box-arrow-right me-2"></i>Logout
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </ng-template>
+        </li>
+
+      </ul>
+    </div>
+  </div>
+</nav>

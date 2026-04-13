@@ -1,3 +1,6 @@
+server:
+  port: 8888
+
 spring:
   application:
     name: config-server
@@ -7,8 +10,5 @@ spring:
     config:
       server:
         native:
-          # Note the 'native' keyword here instead of 'git'
-          search-locations: ${file_location}
+          search-locations: ${config_repo_location}
 
-server:
-  port: 8888

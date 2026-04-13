@@ -44,7 +44,16 @@ public class OrderController {
 	}
 
 	/**
-	 * Get the status of a specific order.
+	 * Get All Orders
+	 * @return
+	 */
+	@GetMapping
+	public ResponseEntity<List<Order>> getAllOrders() {
+		return ResponseEntity.ok(orderRepository.findAll());
+	}
+
+	/**
+	 * Get a specific order.
 	 */
 	@GetMapping("/{id}")
 	public ResponseEntity<Order> getOrder(@PathVariable UUID id) {

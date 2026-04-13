@@ -9,11 +9,11 @@ import com.ecommerce.identityservice.entity.User;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-	Optional<User> findByMobileNumber(String mobileNumber);
+	Optional<User> findByMobile(String mobil);
 
 	Optional<User> findByEmail(String email);
 
-	boolean existsByMobileNumber(String mobileNumber);
+	boolean existsByMobile(String mobile);
 
 	boolean existsByEmail(String email);
 }

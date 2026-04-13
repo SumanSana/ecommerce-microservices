@@ -13,12 +13,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
   data:
     mongodb:
       uri: mongodb://localhost:27017/product_read_db
       auto-index-creation: true
-
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -27,7 +25,20 @@ spring:
     consumer:
       group-id: product-service-group-v12
       auto-offset-reset: earliest
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
 
 logging:
   level:
     com.ecommerce.productservice: DEBUG 
+    
+aws:
+  s3:
+    bucket-name: ekart-images
+    region: us-east-1
+    access-key: test
+    secret-key: testpassword
+    endpoint: http://localhost:9070 # Updated to 9070
+

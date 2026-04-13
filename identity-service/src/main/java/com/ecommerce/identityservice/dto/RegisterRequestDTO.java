@@ -7,20 +7,13 @@ import jakarta.validation.constraints.Size;
 
 public record RegisterRequestDTO(
 
-        @NotBlank
-        @Size(max = 100)
-        String userName,
+		@NotBlank @Size(max = 100) String firstName,
 
-        @Email
-        @NotBlank
-        @Size(max = 150)
-        String email,
+		@NotBlank @Size(max = 100) String lastName,
 
-        @NotBlank
-        @Pattern(regexp="\\d{10}")
-        String mobileNumber,
+		@Email @NotBlank @Size(max = 150) String email,
 
-        @NotBlank
-        @Size(min = 8, max = 64)
-        String password
-) {}
+		@NotBlank @Pattern(regexp = "\\d{10}") String mobile,
+
+		@NotBlank @Size(min = 8, max = 64) String password) {
+}

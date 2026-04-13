@@ -66,7 +66,7 @@ services:
       KAFKA_CLUSTER_ID: 'MkU3ODA4NGU2OEzM0NTY3OA=='
     volumes:
       - kafka_data:/var/lib/kafka/data
-  
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -77,6 +77,39 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       - kafka
+  
+  #minio setup
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    ports:
+      - "9070:9000"    # API Port (Spring Boot uses this)
+      - "9071:9001"    # Access the UI via http://localhost:9071
+    environment:
+      MINIO_ROOT_USER: test
+      MINIO_ROOT_PASSWORD: testpassword
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio-setup:
+    image: minio/mc
+    container_name: minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 test testpassword;
+      mc mb --ignore-existing myminio/ekart-images;
+      mc anonymous set download myminio/ekart-images;
+      exit 0;
+      "
 
 
 volumes:
@@ -84,3 +117,4 @@ volumes:
   redis_data:
   mongo_data:
   kafka_data:
+  minio_data:

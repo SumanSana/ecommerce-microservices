@@ -24,7 +24,7 @@ public class OrderCleanupService {
 	private final OrderRepository orderRepository;
 	private final RedissonClient redissonClient; // Injected
 
-	@Scheduled(fixedRate = 150000) // Runs every 2.5 minutes
+	@Scheduled(fixedRate = 15000) // Runs every 2.5 minutes
 	public void cancelAbandonedOrders() {
 		RLock taskLock = redissonClient.getLock("lock:order-cleanup-task");
 

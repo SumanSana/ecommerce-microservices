@@ -25,7 +25,6 @@ spring:
           auth: true
           starttls:
             enable: true
-            
 logging:
   level:
     com.ecommerce.notificationservice: DEBUG

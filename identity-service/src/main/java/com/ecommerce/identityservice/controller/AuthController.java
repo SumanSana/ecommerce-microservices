@@ -19,17 +19,23 @@ import jakarta.validation.Valid;
 @RequestMapping("/ekart/v1/auth")
 public class AuthController {
 
-	@Autowired
-	private AuthService authService;
+    @Autowired
+    private AuthService authService;
 
-	@PostMapping("/register")
-	public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequestDTO request) {
-		authService.register(request);
-		return ResponseEntity.status(HttpStatus.CREATED).build();
-	}
+    @PostMapping("/register")
+    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequestDTO request) {
+        authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
 
-	@PostMapping("/token")
-	public ResponseEntity<TokenResponseDTO> generateToken(@Valid @RequestBody TokenRequestDTO request) {
-		return ResponseEntity.ok(authService.generateToken(request));
-	}
+    @PostMapping("/login")
+    public ResponseEntity<TokenResponseDTO> generateToken(@Valid @RequestBody TokenRequestDTO request) {
+        return ResponseEntity.ok(authService.generateToken(request));
+    }
+
+    // NEW: The Refresh Endpoint
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponseDTO> refreshToken(@RequestBody String refreshToken) {
+        return ResponseEntity.ok(authService.refreshToken(refreshToken));
+    }
 }

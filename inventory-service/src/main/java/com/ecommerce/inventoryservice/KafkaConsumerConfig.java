@@ -14,7 +14,7 @@ import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import com.ecommerce.inventoryservice.dto.OrderEvent;
-import com.ecommerce.inventoryservice.dto.ProductInitEvent;
+import com.ecommerce.inventoryservice.dto.Product;
 
 @Configuration
 public class KafkaConsumerConfig {
@@ -31,8 +31,8 @@ public class KafkaConsumerConfig {
 
 	// 2. Factory for OrderEvent DTO
 	@Bean
-	public ConcurrentKafkaListenerContainerFactory<String, ProductInitEvent> productInit() {
-		return createFactory(ProductInitEvent.class);
+	public ConcurrentKafkaListenerContainerFactory<String, Product> productInit() {
+		return createFactory(Product.class);
 	}
 
 	@Bean

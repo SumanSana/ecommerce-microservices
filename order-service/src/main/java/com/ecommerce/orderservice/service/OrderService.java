@@ -20,7 +20,6 @@ import com.ecommerce.orderservice.dto.Address;
 import com.ecommerce.orderservice.dto.OrderRequest;
 import com.ecommerce.orderservice.dto.OrderResponse;
 import com.ecommerce.orderservice.dto.PaymentRequest;
-import com.ecommerce.orderservice.dto.ProductViewDTO;
 import com.ecommerce.orderservice.entity.Order;
 import com.ecommerce.orderservice.entity.OrderEvent;
 import com.ecommerce.orderservice.entity.OrderItem;
@@ -60,9 +59,8 @@ public class OrderService {
 			log.info("Creating order for customer: {}", request.customerId());
 
 			List<OrderItem> orderItems = request.items().stream().map(itemReq -> {
-				ProductViewDTO product = productClient.getProductBySku(itemReq.skuId());
-				return OrderItem.builder().skuId(product.skuId()).quantity(itemReq.quantity()).price(product.price())
-						.build();
+				BigDecimal price = productClient.getSkuPrice(itemReq.skuId());
+				return OrderItem.builder().skuId(itemReq.skuId()).quantity(itemReq.quantity()).price(price).build();
 			}).toList();
 
 			BigDecimal totalAmount = orderItems.stream()
@@ -70,8 +68,9 @@ public class OrderService {
 					.reduce(BigDecimal.ZERO, BigDecimal::add);
 
 			Order order = Order.builder().customerId(request.customerId()).customerEmail(request.customerEmail())
-					.status(OrderStatus.PENDING).totalAmount(totalAmount).shippingAddressLine1(request.addressLine1())
-					.shippingCity(request.city()).shippingZipCode(request.zipCode()).shippingCountry(request.country())
+					.status(OrderStatus.PENDING).totalAmount(totalAmount)
+					.shippingAddressLine1(request.shippingAddressLine1()).shippingCity(request.shippingCity())
+					.shippingZipCode(request.shippingZipCode()).shippingCountry(request.shippingCountry())
 					.items(orderItems).build();
 
 			Order savedOrder = orderRepository.save(order);
@@ -192,10 +191,6 @@ public class OrderService {
 		outboxRepository.save(OutboxEvent.builder().aggregateType(aggregateType).aggregateId(id).eventType(type)
 				.payload(payload).build());
 	}
-
-	// ==========================================
-	// REDIS LOCK HELPERS
-	// ==========================================
 
 	/**
 	 * Helper for methods that return a value (like createOrder)

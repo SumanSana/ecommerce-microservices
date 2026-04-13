@@ -1,8 +1,10 @@
 package com.ecommerce.inventoryservice.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -51,4 +53,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, UUID>{
 	    WHERE i.skuId = :skuId
 	""")
 	int rollbackInventoryForCancelledOrder(String skuId, int qty);
+
+	public List<Inventory> findBySkuIdContainingIgnoreCase(String term, Pageable limit);
 }

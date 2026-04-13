@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
-public record OrderRequest(@NotNull UUID customerId, @NotBlank String customerEmail, @NotBlank String addressLine1,
-		@NotBlank String city, @NotBlank String zipCode, @NotBlank String country,
-		@NotEmpty List<OrderItemRequest> items) {
+public record OrderRequest(@NotNull UUID customerId, @NotBlank String customerEmail,
+		@NotBlank String shippingAddressLine1, @NotBlank String shippingCity, @NotBlank String shippingZipCode,
+		@NotBlank String shippingCountry, @NotEmpty List<OrderItemRequest> items) {
 }
